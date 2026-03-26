@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ValidaNFe · Análise IBS/CBS em Massa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Sora', 'sans-serif'],
+            mono: ['IBM Plex Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50:  '#fff7ed',
+              100: '#ffedd5',
+              400: '#fb923c',
+              500: '#f97316',
+              600: '#ea580c',
+              700: '#c2410c',
+            },
+            slate: {
+              850: '#0f172a',
+              900: '#0a0f1e',
+              950: '#05080f',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --orange: #f97316;
+      --orange-dim: rgba(249,115,22,0.15);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      background-color: #05080f;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(249,115,22,0.12) 0%, transparent 60%),
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.018) 39px, rgba(255,255,255,0.018) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.018) 39px, rgba(255,255,255,0.018) 40px);
+      min-height: 100vh;
+      font-family: 'Sora', sans-serif;
+      color: #e2e8f0;
+    }
+
+    .glass {
+      background: rgba(15,23,42,0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .glass-orange {
+      background: rgba(249,115,22,0.08);
+      border: 1px solid rgba(249,115,22,0.25);
+    }
+
+    /* Upload zone */
+    #drop-zone {
+      border: 2px dashed rgba(249,115,22,0.4);
+      transition: all 0.25s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    #drop-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(249,115,22,0.06) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: rgba(249,115,22,0.85);
+      box-shadow: 0 0 40px rgba(249,115,22,0.15), inset 0 0 30px rgba(249,115,22,0.05);
+    }
+    #drop-zone:hover::before, #drop-zone.drag-over::before {
+      opacity: 1;
+    }
+
+    /* Progress bar */
+    #progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ea580c, #f97316, #fb923c);
+      background-size: 200% 100%;
+      transition: width 0.3s ease;
+      animation: shimmer 1.5s infinite linear;
+      border-radius: 999px;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Table rows */
+    tbody tr {
+      transition: background 0.15s;
+    }
+    tbody tr:hover {
+      background: rgba(249,115,22,0.05);
+    }
+
+    /* Badge */
+    .badge-warn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(249,115,22,0.15);
+      border: 1px solid rgba(249,115,22,0.35);
+      color: #f97316;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+    .badge-ok {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(34,197,94,0.12);
+      border: 1px solid rgba(34,197,94,0.3);
+      color: #22c55e;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    /* Btn primary */
+    .btn-primary {
+      background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+      color: #fff;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      border-radius: 10px;
+      padding: 12px 28px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover::after { opacity: 1; }
+    .btn-primary:hover { box-shadow: 0 8px 25px rgba(249,115,22,0.35); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); box-shadow: none; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.05);
+      color: #94a3b8;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      border-radius: 10px;
+      padding: 12px 28px;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.09);
+      color: #e2e8f0;
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(249,115,22,0.3); border-radius: 3px; }
+
+    /* Fade in */
+    .fade-in {
+      animation: fadeIn 0.45s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mono tag */
+    .tag-mono {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      color: #64748b;
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body class="min-h-screen py-10 px-4">
+
+  <!-- ── TOP PROGRESS BAR ── -->
+  <div id="progress-section" class="hidden fixed top-0 left-0 right-0 z-50">
+    <div class="w-full bg-slate-950/90 backdrop-blur border-b border-slate-800 px-6 py-3 flex items-center gap-4">
+      <span id="progress-label" class="text-sm font-mono text-orange-400 whitespace-nowrap font-medium" style="font-family:'IBM Plex Mono',monospace">0 de 0 XMLs analisados</span>
+      <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+        <div id="progress-fill" style="width:0%"></div>
+      </div>
+      <span id="progress-pct" class="text-xs font-mono text-slate-400 whitespace-nowrap" style="font-family:'IBM Plex Mono',monospace">0%</span>
+    </div>
+  </div>
+
+  <!-- ── MAIN WRAPPER ── -->
+  <div class="max-w-4xl mx-auto space-y-8">
+
+    <!-- HEADER -->
+    <header class="text-center pt-6">
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-orange mb-5">
+        <span class="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
+        <span class="text-xs font-mono text-orange-400 tracking-widest uppercase" style="font-family:'IBM Plex Mono',monospace">NF-e · Reforma Tributária</span>
+      </div>
+      <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-white mb-2">
+        Valida<span class="text-orange-500">NFe</span>
+      </h1>
+      <p class="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
+        Análise em lote de notas fiscais eletrônicas para identificar conformidade com as novas tags de impostos <span class="text-orange-400 font-semibold">IBS</span> e <span class="text-orange-400 font-semibold">CBS</span> da reforma tributária.
+      </p>
+    </header>
+
+    <!-- UPLOAD CARD -->
+    <div class="glass rounded-2xl p-6 md:p-8 space-y-5">
+
+      <!-- Drop Zone -->
+      <div
+        id="drop-zone"
+        class="rounded-xl p-10 flex flex-col items-center justify-center gap-4 text-center"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="handleDragOver(event)"
+        ondragleave="handleDragLeave(event)"
+        ondrop="handleDrop(event)"
+      >
+        <div class="w-16 h-16 rounded-2xl flex items-center justify-center" style="background:rgba(249,115,22,0.12); border:1px solid rgba(249,115,22,0.3)">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-white font-semibold text-base mb-1">Arraste os XMLs aqui ou clique para selecionar</p>
+          <p class="text-slate-500 text-sm">Somente arquivos <span class="text-orange-400 font-mono text-xs">.xml</span> são aceitos · múltipla seleção habilitada</p>
+        </div>
+        <input id="file-input" type="file" accept=".xml" multiple class="hidden" onchange="handleFileSelect(event)" />
+      </div>
+
+      <!-- Counter + Actions row -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <!-- Counter -->
+        <div id="counter-block" class="hidden items-center gap-3 fade-in">
+          <div class="glass-orange rounded-lg px-4 py-2 flex items-center gap-2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span id="counter-label" class="font-mono text-orange-400 font-semibold text-sm" style="font-family:'IBM Plex Mono',monospace">0 XMLs carregados</span>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex items-center gap-3 ml-auto">
+          <button id="btn-reset" class="btn-ghost hidden text-sm" onclick="location.reload()">
+            ↺ Novo Upload
+          </button>
+          <button id="btn-validate" class="btn-primary text-sm hidden" onclick="validateXMLs()">
+            ▶ Validar XMLs
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS SECTION -->
+    <div id="results-section" class="hidden fade-in space-y-5">
+
+      <!-- Summary row -->
+      <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+
+      <!-- All good banner -->
+      <div id="all-good-banner" class="hidden glass rounded-2xl p-6 border border-green-500/25" style="background:rgba(34,197,94,0.07)">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background:rgba(34,197,94,0.15)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div>
+            <span id="all-good-text" class="text-green-400 font-semibold text-base block">Parabéns, todos os XMLs estão validados e com as Tags de CBS e IBS</span>
+            <span class="text-slate-400 text-sm">Todos os arquivos estão em conformidade com o novo padrão tributário.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div id="table-wrapper" class="hidden glass rounded-2xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+          <div>
+            <h2 class="text-white font-semibold text-sm">Notas sem conformidade IBS/CBS</h2>
+            <p class="text-slate-500 text-xs mt-0.5">Apenas NF-e sem a tag <span class="font-mono text-orange-400">&lt;gIBSCBS&gt;</span> são listadas abaixo</p>
+          </div>
+          <span id="table-count-badge" class="badge-warn">0 notas</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-800/80" style="background:rgba(0,0,0,0.3)">
+                <th class="text-left px-5 py-3 text-slate-500 font-medium text-xs uppercase tracking-wider" style="font-family:'IBM Plex Mono',monospace">Emitente</th>
+                <th class="text-left px-5 py-3 text-slate-500 font-medium text-xs uppercase tracking-wider" style="font-family:'IBM Plex Mono',monospace">Destinatário</th>
+                <th class="text-left px-5 py-3 text-slate-500 font-medium text-xs uppercase tracking-wider" style="font-family:'IBM Plex Mono',monospace">Chave NF-e</th>
+                <th class="text-left px-5 py-3 text-slate-500 font-medium text-xs uppercase tracking-wider" style="font-family:'IBM Plex Mono',monospace">Status IBS/CBS</th>
+              </tr>
+            </thead>
+            <tbody id="table-body" class="divide-y divide-slate-800/60">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /max-w -->
+
+  <!-- FOOTER -->
+  <footer class="text-center mt-16 pb-6">
+    <p class="text-slate-700 text-xs" style="font-family:'IBM Plex Mono',monospace">ValidaNFe · Processamento 100% local · Nenhum dado é enviado ao servidor</p>
+  </footer>
+
+<script>
+  // ── STATE ──────────────────────────────────────────────────────────────────
+  let loadedFiles = [];
+
+  // ── DRAG & DROP ────────────────────────────────────────────────────────────
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.add('drag-over');
+  }
+  function handleDragLeave(e) {
+    document.getElementById('drop-zone').classList.remove('drag-over');
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.remove('drag-over');
+    const files = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.xml'));
+    if (files.length) processFiles(files);
+    else showToast('Nenhum arquivo .xml detectado no drop.', 'warn');
+  }
+
+  // ── FILE SELECT ─────────────────────────────────────────────────────────────
+  function handleFileSelect(e) {
+    const files = Array.from(e.target.files);
+    if (files.length) processFiles(files);
+  }
+
+  function processFiles(files) {
+    loadedFiles = files;
+    const n = files.length;
+
+    // Show counter
+    const cb = document.getElementById('counter-block');
+    cb.classList.remove('hidden');
+    cb.classList.add('flex');
+    document.getElementById('counter-label').textContent =
+      n === 1 ? '1 XML carregado' : `${n} XMLs carregados`;
+
+    // Show buttons
+    document.getElementById('btn-validate').classList.remove('hidden');
+    document.getElementById('btn-reset').classList.remove('hidden');
+
+    // Reset results if re-uploading
+    document.getElementById('results-section').classList.add('hidden');
+    document.getElementById('progress-section').classList.add('hidden');
+  }
+
+  // ── VALIDATE ───────────────────────────────────────────────────────────────
+  async function validateXMLs() {
+    if (!loadedFiles.length) return;
+
+    const total = loadedFiles.length;
+    const btnVal = document.getElementById('btn-validate');
+    btnVal.disabled = true;
+    btnVal.textContent = 'Analisando…';
+
+    // Show progress bar
+    const progressSection = document.getElementById('progress-section');
+    progressSection.classList.remove('hidden');
+    setProgress(0, total);
+
+    const parser = new DOMParser();
+    const withoutTag = [];
+    let countOk = 0;
+
+    for (let i = 0; i < total; i++) {
+      const file = loadedFiles[i];
+      const text = await readFileAsText(file);
+      const doc  = parser.parseFromString(text, 'application/xml');
+
+      // Tag check: <gIBSCBS>
+      const hasTag = doc.querySelector('gIBSCBS') !== null;
+
+      if (hasTag) {
+        countOk++;
+      } else {
+        const emitente    = getTextContent(doc, 'emit xNome') || getTextContent(doc, 'emit > xNome') || '—';
+        const destinatario = getTextContent(doc, 'dest xNome') || getTextContent(doc, 'dest > xNome') || '—';
+        const chave       = getTextContent(doc, 'chNFe') || file.name.replace('.xml','');
+        withoutTag.push({ emitente, destinatario, chave, file: file.name });
+      }
+
+      setProgress(i + 1, total);
+      // Yield to browser so progress renders
+      await new Promise(r => setTimeout(r, 12));
+    }
+
+    // Render results
+    renderResults(total, countOk, withoutTag);
+    btnVal.disabled = false;
+    btnVal.textContent = '▶ Validar XMLs';
+  }
+
+  // ── HELPERS ────────────────────────────────────────────────────────────────
+  function readFileAsText(file) {
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onload  = e => res(e.target.result);
+      fr.onerror = rej;
+      fr.readAsText(file, 'UTF-8');
+    });
+  }
+
+  function getTextContent(doc, selector) {
+    const el = doc.querySelector(selector);
+    return el ? el.textContent.trim() : null;
+  }
+
+  function setProgress(done, total) {
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-label').textContent = `${done} de ${total} XMLs analisados`;
+    document.getElementById('progress-pct').textContent   = pct + '%';
+  }
+
+  // ── RENDER RESULTS ─────────────────────────────────────────────────────────
+  function renderResults(total, countOk, nonConformant) {
+    const section = document.getElementById('results-section');
+    section.classList.remove('hidden');
+
+    // Summary cards
+    const cardData = [
+      { label: 'Total analisados', value: total,                color: 'text-slate-300', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.08)' },
+      { label: 'Conformes',        value: countOk,              color: 'text-green-400',  bg: 'rgba(34,197,94,0.07)',  border: 'rgba(34,197,94,0.25)' },
+      { label: 'Sem tag IBS/CBS',  value: nonConformant.length, color: 'text-orange-400', bg: 'rgba(249,115,22,0.07)', border: 'rgba(249,115,22,0.25)' },
+    ];
+    document.getElementById('summary-cards').innerHTML = cardData.map(c => `
+      <div class="rounded-xl p-4 flex flex-col gap-1" style="background:${c.bg}; border:1px solid ${c.border}">
+        <span class="${c.color} text-2xl font-bold font-mono" style="font-family:'IBM Plex Mono',monospace">${c.value}</span>
+        <span class="text-slate-500 text-xs font-medium">${c.label}</span>
+      </div>
+    `).join('');
+
+    if (nonConformant.length === 0) {
+      // All good
+      document.getElementById('all-good-banner').classList.remove('hidden');
+      document.getElementById('table-wrapper').classList.add('hidden');
+    } else {
+      document.getElementById('all-good-banner').classList.add('hidden');
+      document.getElementById('table-wrapper').classList.remove('hidden');
+
+      const badge = document.getElementById('table-count-badge');
+      badge.textContent = nonConformant.length === 1 ? '1 nota' : `${nonConformant.length} notas`;
+
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = nonConformant.map((item, idx) => `
+        <tr class="${idx % 2 === 0 ? '' : 'bg-black/10'}">
+          <td class="px-5 py-3.5 text-slate-200 text-sm max-w-[180px] truncate" title="${escapeHtml(item.emitente)}">${escapeHtml(item.emitente)}</td>
+          <td class="px-5 py-3.5 text-slate-200 text-sm max-w-[180px] truncate" title="${escapeHtml(item.destinatario)}">${escapeHtml(item.destinatario)}</td>
+          <td class="px-5 py-3.5 tag-mono max-w-[220px] truncate" title="${escapeHtml(item.chave)}">${escapeHtml(item.chave)}</td>
+          <td class="px-5 py-3.5">
+            <span class="badge-warn">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1" fill="white"/></svg>
+              Sem tag CBS/IBS
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Scroll to results
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl text-sm font-medium shadow-xl z-50 fade-in';
+    t.style.cssText = type === 'warn'
+      ? 'background:#1e293b;border:1px solid rgba(249,115,22,0.4);color:#f97316'
+      : 'background:#1e293b;border:1px solid rgba(34,197,94,0.4);color:#22c55e';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+  }
+</script>
+</body>
+</html>
